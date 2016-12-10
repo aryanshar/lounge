@@ -87,6 +87,16 @@ module.exports = function(irc, network) {
 		});
 	}
 
+	if (Helper.config.debugRaw) {
+		irc.on("raw", function(message, direction) {
+			network.channels[0].pushMessage(client, new Msg({
+				from: direction ? "»" : "«",
+				type: "raw",
+				text: message
+			}), true);
+		});
+	}
+
 	irc.on("socket error", function(err) {
 		network.channels[0].pushMessage(client, new Msg({
 			type: Msg.Type.ERROR,

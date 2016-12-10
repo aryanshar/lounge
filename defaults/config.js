@@ -368,4 +368,11 @@ module.exports = {
 	// @default  false
 	//
 	debug: false,
+
+	// Enables logging raw IRC messages into each server window.
+	//
+	// @type     boolean
+	// @default  false
+	//
+	debugRaw: false,
 };
