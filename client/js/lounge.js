@@ -12,7 +12,6 @@ const URI = require("urijs");
 const emojiMap = require("./libs/simplemap.json");
 require("./libs/jquery/inputhistory");
 require("./libs/jquery/stickyscroll");
-require("./libs/jquery/tabcomplete");
 const helpers_parse = require("./libs/handlebars/parse");
 const helpers_roundBadgeNumber = require("./libs/handlebars/roundBadgeNumber");
 const slideoutMenu = require("./libs/slideout");
@@ -895,6 +894,22 @@ $(function() {
 		input.style.height = input.style.minHeight;
 	}
 
+	function getCaretPosition(ctrl) {
+		var start, end;
+		if (ctrl.setSelectionRange) {
+			start = ctrl.selectionStart;
+			end = ctrl.selectionEnd;
+		} else if (document.selection && document.selection.createRange) {
+			var range = document.selection.createRange();
+			start = 0 - range.duplicate().moveStart("character", -100000);
+			end = start + range.text.length;
+		}
+		return {
+			start: start,
+			end: end
+		};
+	}
+
 	var input = $("#input")
 		.history()
 		.on("input", function() {
@@ -913,16 +928,41 @@ $(function() {
 
 			chat.find(".chan.active .chat").trigger("msg.sticky"); // fix growing
 		})
-		.tab(completeNicks, {hint: false})
 		.textcomplete([emojiStrategy, nicksStrategy, chanStrategy, commandStrategy], {
 			dropdownClassName: "textcomplete-menu",
 			placement: "top"
 		}).on({
+			"textComplete:select": function(e, v) {
+				if ($(this).data("manual-trigger")) {
+					$(this).data("manual-trigger", false);
+					var caret = getCaretPosition(this);
+					var substring = this.value.substring(0, caret.end);
+					var lastIndex = substring.lastIndexOf(" ");
+					var tillLast = substring.substring(0, lastIndex + 1);
+					var afterLast = this.value.substring(caret.end);
+					this.value = tillLast + v + afterLast;
+				}
+			},
 			"textComplete:show": function() {
 				$(this).data("autocompleting", true);
 			},
 			"textComplete:hide": function() {
 				$(this).data("autocompleting", false);
+			}
+		})
+		.on("keydown", function(event) {
+			var keyCode = event.keyCode || event.which;
+
+			if (keyCode === 9 && !$("#input").data("autocompleting")) {
+				event.preventDefault();
+				var caret = getCaretPosition(this);
+				var substring = this.value.substring(0, caret.end);
+				var lastIndex = substring.lastIndexOf(" ");
+				var lastWord = substring.substr(lastIndex + 1);
+				$("#input").data("manual-trigger", true);
+				setTimeout(function() {
+					$("#input").textcomplete("trigger", "@" + lastWord);
+				}, 100);
 			}
 		});
 
